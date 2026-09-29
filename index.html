@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>상지 자세 인식 테스트 V1.6 Tablet</title>
+<style>
+  :root{
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#111827;background:#f3f4f6;
+    --tap:48px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:12px;overscroll-behavior:none}
+  .wrap{max-width:1200px;margin:auto}
+  h1{margin:0 0 4px;font-size:clamp(22px,4vw,30px)}
+  .sub{margin:0 0 12px;color:#4b5563;line-height:1.45;font-size:14px}
+  .notice{
+    padding:10px 12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;
+    border-radius:12px;margin-bottom:12px;font-size:13px;line-height:1.45
+  }
+  .headerRow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
+  .headerText{min-width:0;flex:1}
+  .langSwitch{display:flex;gap:4px;padding:4px;background:#e5e7eb;border-radius:12px;flex:0 0 auto}
+  .langBtn{min-height:40px;padding:7px 11px;background:transparent;color:#374151;font-size:14px;border-radius:9px}
+  .langBtn.active{background:white;color:#111827;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .toolbar{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px
+  }
+  button,select{
+    min-height:var(--tap);border-radius:12px;font-size:16px
+  }
+  button{
+    border:0;padding:10px 14px;background:#111827;color:white;font-weight:700;cursor:pointer;
+    touch-action:manipulation
+  }
+  button.secondary{background:#4b5563}
+  button.next{background:#2563eb}
+  button:disabled{opacity:.45}
+  select{
+    border:1px solid #cbd5e1;background:white;padding:0 12px;min-width:118px
+  }
+  .status{
+    padding:10px 12px;border-radius:12px;background:white;border:1px solid #d1d5db;
+    min-height:var(--tap);display:flex;align-items:center;font-size:14px
+  }
+  .poseNav{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px
+  }
+  .poseBtn{
+    background:white;color:#374151;border:1px solid #d1d5db;
+    padding:8px;min-height:58px
+  }
+  .poseBtn.active{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}
+  .poseBtn.done{border-color:#86efac;background:#f0fdf4;color:#166534}
+  .poseBtn b{display:block;font-size:14px}.poseBtn span{display:block;font-size:12px;margin-top:3px;opacity:.75}
+  .grid{
+    display:grid;grid-template-columns:minmax(0,1.8fr) minmax(300px,1fr);gap:12px
+  }
+  .card{background:white;border:1px solid #d1d5db;border-radius:16px;padding:10px}
+  .stage{
+    position:relative;width:100%;aspect-ratio:4/3;background:#111827;overflow:hidden;border-radius:14px
+  }
+  video,canvas{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)
+  }
+  canvas{pointer-events:none}
+  .metrics{display:grid;gap:10px}
+  .metric{border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+  .label{font-size:12px;color:#6b7280;margin-bottom:4px}
+  .poseTitle{font-size:20px;font-weight:850}
+  .poseDesc,.small{font-size:13px;color:#6b7280;line-height:1.45}
+  .value{font-size:36px;font-weight:850;line-height:1.05}
+  .feedback{
+    border-radius:12px;padding:13px;font-size:17px;font-weight:800;line-height:1.4
+  }
+  .feedback.good{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+  .feedback.near{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+  .feedback.adjust{background:#fff7ed;border:1px solid #fdba74;color:#9a3412}
+  .feedback.wait{background:#f8fafc;border:1px solid #cbd5e1;color:#334155}
+  .progressBar{width:100%;height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:10px}
+  .progressFill{height:100%;width:0;background:#10b981;transition:width .08s linear}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .tip{
+    margin-top:10px;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;
+    border-radius:10px;font-size:13px;line-height:1.45
+  }
+  .ok{color:#047857}.warn{color:#b45309}.err{color:#b91c1c}
+
+  @media(max-width:900px){
+    body{padding:8px}
+    .grid{grid-template-columns:1fr}
+    .stage{aspect-ratio:4/3}
+    .metrics{grid-template-columns:1fr 1fr}
+    .metric.feedbackCard{grid-column:1/-1}
+  }
+  @media(max-width:620px){
+    .poseNav{grid-template-columns:repeat(2,1fr)}
+    .metrics{grid-template-columns:1fr}
+    .stage{aspect-ratio:3/4}
+    .toolbar>*{flex:1 1 45%}
+    .toolbar label{flex:0 0 auto}
+  }
+  @media(orientation:landscape) and (max-height:700px){
+    .grid{grid-template-columns:minmax(0,1.7fr) minmax(300px,1fr)}
+    .stage{aspect-ratio:4/3}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="headerRow">
+    <div class="headerText">
+      <h1 id="appTitle">상지 자세 인식 테스트 V1.6 Tablet</h1>
+      <p class="sub" id="appSub">태블릿 터치 조작, 화면 회전, 전면/후면 카메라 선택을 고려한 버전입니다.</p>
+    </div>
+    <div class="langSwitch" aria-label="Language">
+      <button id="langKo" class="langBtn active" type="button">한국어</button>
+      <button id="langJa" class="langBtn" type="button">日本語</button>
+    </div>
+  </div>
+
+  <div class="notice" id="secureNotice">
+    태블릿 카메라는 보통 <b>HTTPS 주소</b>에서 가장 안정적으로 작동합니다.
+    PC의 localhost는 PC에서만 localhost이므로, 태블릿에서는 HTTPS로 배포한 주소를 사용하는 것을 권장합니다.
+  </div>
+
+  <div class="poseNav" id="poseNav"></div>
+
+  <div class="toolbar">
+    <label for="arm"><b id="armLabel">측정 팔</b></label>
+    <select id="arm">
+      <option id="armLeft" value="left">왼팔</option>
+      <option id="armRight" value="right">오른팔</option>
+    </select>
+
+    <label for="cameraMode"><b id="cameraLabel">카메라</b></label>
+    <select id="cameraMode">
+      <option id="cameraFront" value="user">전면 카메라</option>
+      <option id="cameraRear" value="environment">후면 카메라</option>
+    </select>
+
+    <button id="start" disabled>카메라 시작</button>
+    <button id="stop" class="secondary" disabled>카메라 종료</button>
+    <div id="status" class="status">MediaPipe Full 모델 불러오는 중…</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="stage">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+      </div>
+      <div class="tip" id="tabletTip">
+        <b>태블릿 팁:</b> 가로 모드에서 태블릿을 책상이나 거치대에 세워 두고 사용하면 가장 안정적입니다.
+        선택한 팔의 어깨·팔꿈치·손목이 모두 화면에 들어오게 해주세요.
+      </div>
+    </div>
+
+    <div class="card metrics">
+      <div class="metric">
+        <div class="label" id="currentStepLabel">현재 단계</div>
+        <div id="poseTitle" class="poseTitle"></div>
+        <div id="poseDesc" class="poseDesc"></div>
+      </div>
+
+      <div class="metric">
+        <div class="label" id="angleLabel">안정화 팔꿈치 각도</div>
+        <div id="angle" class="value">--°</div>
+        <div id="targetAngle" class="small" style="margin-top:5px"></div>
+      </div>
+
+      <div class="metric feedbackCard">
+        <div class="label" id="feedbackLabel">자세 안내</div>
+        <div id="feedback" class="feedback wait">카메라를 시작하고 팔을 화면에 보여주세요.</div>
+        <div class="progressBar"><div id="progressFill" class="progressFill"></div></div>
+        <div id="progressText" class="small" style="margin-top:7px">좋은 자세 유지 시간: 0.0 / 3.0초</div>
+        <div class="actions">
+          <button id="prevPose" class="secondary" type="button">← 이전 자세</button>
+          <button id="nextPose" class="next" type="button">다음 자세 →</button>
+        </div>
+      </div>
+
+      <div class="metric">
+        <div class="label" id="trackLabel">인식 상태</div>
+        <div id="track" style="font-size:18px;font-weight:750">대기 중</div>
+        <div id="conf" class="small" style="margin-top:6px">관절 확인 전</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {PoseLandmarker, FilesetResolver} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/+esm";
+
+const POSES = [
+  {name:{ko:"1. 기본 굽힘",ja:"1. 基本屈曲"}, angle:90, tol:7, desc:{ko:"팔꿈치를 약 90°로 굽혀 목표 윤곽선에 맞춰보세요.",ja:"肘を約90°に曲げ、ガイドアームに合わせてください。"}},
+  {name:{ko:"2. 조금 펴기",ja:"2. やや伸展"}, angle:120, tol:8, desc:{ko:"첫 자세보다 팔을 조금 더 펴서 약 120°를 만들어보세요.",ja:"最初の姿勢より少し腕を伸ばし、約120°に合わせてください。"}},
+  {name:{ko:"3. 깊게 굽히기",ja:"3. 深い屈曲"}, angle:70, tol:8, desc:{ko:"팔꿈치를 더 굽혀 약 70° 자세를 만들어보세요.",ja:"肘をさらに曲げ、約70°の姿勢に合わせてください。"}},
+  {name:{ko:"4. 거의 펴기",ja:"4. ほぼ伸展"}, angle:160, tol:10, desc:{ko:"마지막은 팔을 거의 곧게 펴 약 160°에 맞춰보세요.",ja:"最後は腕をほぼまっすぐに伸ばし、約160°に合わせてください。"}}
+];
+
+const I18N = {
+  ko:{
+    title:"상지 자세 인식 테스트 V1.6 Tablet",
+    sub:"태블릿 터치 조작, 화면 회전, 전면/후면 카메라 선택을 고려한 버전입니다.",
+    notice:'태블릿 카메라는 보통 <b>HTTPS 주소</b>에서 가장 안정적으로 작동합니다. PC의 localhost는 PC에서만 localhost이므로, 태블릿에서는 HTTPS로 배포한 주소를 사용하는 것을 권장합니다.',
+    noticeInsecure:'<b>주의:</b> 현재 주소는 보안 연결(HTTPS)이 아닙니다. 태블릿 브라우저가 카메라 권한을 막을 수 있습니다.',
+    armLabel:"측정 팔",leftArm:"왼팔",rightArm:"오른팔",cameraLabel:"카메라",frontCamera:"전면 카메라",rearCamera:"후면 카메라",
+    start:"카메라 시작",stop:"카메라 종료",loading:"MediaPipe Full 모델 불러오는 중…",
+    tip:'<b>태블릿 팁:</b> 가로 모드에서 태블릿을 책상이나 거치대에 세워 두고 사용하면 가장 안정적입니다. 선택한 팔의 어깨·팔꿈치·손목이 모두 화면에 들어오게 해주세요.',
+    currentStep:"현재 단계",angleLabel:"안정화 팔꿈치 각도",feedbackLabel:"자세 안내",trackLabel:"인식 상태",
+    initialFeedback:"카메라를 시작하고 팔을 화면에 보여주세요.",holdTime:"좋은 자세 유지 시간",prev:"← 이전 자세",next:"다음 자세 →",first:"처음 자세로 ↺",waiting:"대기 중",beforeJoint:"관절 확인 전",
+    target:(lo,hi)=>`목표 범위: ${lo}° ~ ${hi}°`,targetNav:a=>`${a}° 목표`,
+    showArm:"팔을 화면에 보여주세요.",readyPose:name=>`${name} 준비! 유령 팔에 맞춰보세요.`,
+    goodDone:"좋아요! 이 자세를 안정적으로 유지했어요. 다음 자세로 넘어가도 됩니다.",
+    goodMore:s=>`아주 좋아요! ${s}초만 더 유지해보세요.`,near:"거의 맞았어요. 유령 팔에 조금만 더 맞춰볼까요?",
+    bendMore:"좋아요. 팔꿈치를 조금만 더 굽혀보세요.",straightenMore:"좋아요. 팔을 조금만 더 펴보세요.",positionMore:"잘하고 있어요. 유령 팔 쪽으로 위치를 조금만 맞춰보세요.",
+    ready:"준비 완료. 카메라를 시작하세요.",modelFail:"모델 로딩 실패. 인터넷 연결을 확인하세요.",cameraRunning:"카메라 실행 중",
+    permissionDenied:"카메라 권한이 거부되었습니다. 브라우저 사이트 설정에서 카메라를 허용하세요.",cameraOpenFail:"카메라를 열 수 없습니다. HTTPS 주소와 카메라 권한을 확인하세요.",cameraStopped:"카메라 종료됨",analysisError:"분석 오류가 발생했습니다.",
+    tracking:"인식 중",briefLost:"잠깐 놓침 — 마지막 상태 유지",armHard:"선택한 팔 인식이 어려움",showJoints:"어깨·팔꿈치·손목을 화면에 보여주세요.",adjustTablet:"팔 전체가 보이도록 태블릿 위치를 조금만 맞춰볼까요?",
+    noPerson:"사람을 찾지 못함",showUpper:"상체와 팔이 화면에 보이게 해주세요.",upperReady:"상체와 팔이 화면에 보이면 바로 시작할 수 있어요.",visibility:v=>`최저 visibility ${v}%`
+  },
+  ja:{
+    title:"上肢姿勢認識テスト V1.6 Tablet",
+    sub:"タブレットのタッチ操作、画面回転、前面・背面カメラの切り替えに対応したバージョンです。",
+    notice:'タブレットのカメラは通常、<b>HTTPSアドレス</b>で最も安定して動作します。PCのlocalhostはPC上でのみlocalhostとして扱われるため、タブレットではHTTPSで公開したアドレスの使用を推奨します。',
+    noticeInsecure:'<b>注意:</b> 現在のアドレスは安全な接続（HTTPS）ではありません。タブレットのブラウザでカメラ権限がブロックされる場合があります。',
+    armLabel:"測定する腕",leftArm:"左腕",rightArm:"右腕",cameraLabel:"カメラ",frontCamera:"前面カメラ",rearCamera:"背面カメラ",
+    start:"カメラ開始",stop:"カメラ停止",loading:"MediaPipe Fullモデルを読み込み中…",
+    tip:'<b>タブレットのヒント:</b> 横向きでタブレットを机やスタンドに固定すると、より安定して使用できます。選択した腕の肩・肘・手首がすべて画面に入るようにしてください。',
+    currentStep:"現在のステップ",angleLabel:"安定化された肘角度",feedbackLabel:"姿勢ガイド",trackLabel:"認識状態",
+    initialFeedback:"カメラを開始して、腕を画面に映してください。",holdTime:"良い姿勢の保持時間",prev:"← 前の姿勢",next:"次の姿勢 →",first:"最初の姿勢へ ↺",waiting:"待機中",beforeJoint:"関節確認前",
+    target:(lo,hi)=>`目標範囲: ${lo}° ～ ${hi}°`,targetNav:a=>`${a}° 目標`,
+    showArm:"腕を画面に映してください。",readyPose:name=>`${name} の準備ができました。ガイドアームに合わせてください。`,
+    goodDone:"いいですね！この姿勢を安定して保持できました。次の姿勢へ進めます。",
+    goodMore:s=>`とても良いです！あと${s}秒キープしてください。`,near:"もう少しです。ガイドアームに少しだけ近づけてください。",
+    bendMore:"いいですね。肘をもう少し曲げてください。",straightenMore:"いいですね。腕をもう少し伸ばしてください。",positionMore:"その調子です。腕の位置をガイドアームにもう少し合わせてください。",
+    ready:"準備完了。カメラを開始してください。",modelFail:"モデルの読み込みに失敗しました。インターネット接続を確認してください。",cameraRunning:"カメラ動作中",
+    permissionDenied:"カメラの使用が許可されていません。ブラウザのサイト設定でカメラを許可してください。",cameraOpenFail:"カメラを開けません。HTTPSアドレスとカメラ権限を確認してください。",cameraStopped:"カメラ停止",analysisError:"解析中にエラーが発生しました。",
+    tracking:"認識中",briefLost:"一時的に見失いました — 最後の状態を保持中",armHard:"選択した腕を認識しにくい状態です",showJoints:"肩・肘・手首が画面に入るようにしてください。",adjustTablet:"腕全体が見えるように、タブレットの位置を少し調整してください。",
+    noPerson:"人物を検出できません",showUpper:"上半身と腕が画面に入るようにしてください。",upperReady:"上半身と腕が映るとすぐに開始できます。",visibility:v=>`最小 visibility ${v}%`
+  }
+};
+
+let currentLang=localStorage.getItem("poseLang")||"ko";
+if(!["ko","ja"].includes(currentLang))currentLang="ko";
+const t=(key,...args)=>{const v=I18N[currentLang][key];return typeof v==="function"?v(...args):v};
+const poseText=(p,key)=>p[key][currentLang];
+
+const $=id=>document.getElementById(id);
+const video=$("video"),canvas=$("canvas"),ctx=canvas.getContext("2d");
+const startBtn=$("start"),stopBtn=$("stop"),armSel=$("arm"),cameraMode=$("cameraMode");
+const statusEl=$("status"),angleEl=$("angle"),targetAngleEl=$("targetAngle"),feedbackEl=$("feedback");
+const progressFill=$("progressFill"),progressText=$("progressText"),trackEl=$("track"),confEl=$("conf");
+const poseTitle=$("poseTitle"),poseDesc=$("poseDesc"),poseNav=$("poseNav"),prevBtn=$("prevPose"),nextBtn=$("nextPose");
+const secureNotice=$("secureNotice");
+const langKo=$("langKo"),langJa=$("langJa");
+
+let detector=null,stream=null,raf=null,lastVideoTime=-1,lastDetectAt=0,currentPose=0;
+let smoothAngle=null,lastGoodAt=0,goodStartAt=null;
+let upperLenSmooth=null,lowerLenSmooth=null,shoulderAnchor=null,bodyOutwardSmooth=null,targetElbowSmooth=null,targetWristSmooth=null;
+const completed=new Set();
+
+const HOLD_MS=450,MIN_VIS=.35,ANGLE_ALPHA=.28,HOLD_GOAL_MS=3000;
+const DETECT_INTERVAL_MS=50; // 약 20fps로 제한해 태블릿 발열/부하 감소
+const IDX={LS:11,RS:12,LE:13,RE:14,LW:15,RW:16};
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function ema(prev,v,a=.18){return prev==null?v:a*v+(1-a)*prev}
+function emaPt(prev,v,a=.08){return prev==null?{x:v.x,y:v.y}:{x:ema(prev.x,v.x,a),y:ema(prev.y,v.y,a)}}
+function norm(v){const m=Math.hypot(v.x,v.y)||1;return{x:v.x/m,y:v.y/m}}
+function rotate(v,deg){const r=deg*Math.PI/180,c=Math.cos(r),s=Math.sin(r);return{x:v.x*c-v.y*s,y:v.x*s+v.y*c}}
+function angleDeg(a,b,c){const u=[a.x-b.x,a.y-b.y],v=[c.x-b.x,c.y-b.y],mu=Math.hypot(...u),mv=Math.hypot(...v);if(mu<1e-6||mv<1e-6)return null;return Math.acos(clamp((u[0]*v[0]+u[1]*v[1])/(mu*mv),-1,1))*180/Math.PI}
+function status(t,c=""){statusEl.textContent=t;statusEl.className="status "+c}
+
+function setMirrorForCamera(){
+  const mirrored = cameraMode.value==="user";
+  video.style.transform = mirrored ? "scaleX(-1)" : "none";
+  canvas.style.transform = mirrored ? "scaleX(-1)" : "none";
+}
+
+function armPoints(lm){
+  const L=armSel.value==="left";
+  return{
+    shoulder:lm[L?IDX.LS:IDX.RS], elbow:lm[L?IDX.LE:IDX.RE],
+    wrist:lm[L?IDX.LW:IDX.RW], otherShoulder:lm[L?IDX.RS:IDX.LS]
+  };
+}
+function minVis(p){return Math.min(p.shoulder?.visibility??0,p.elbow?.visibility??0,p.wrist?.visibility??0)}
+function valid(p){
+  if(!p.shoulder||!p.elbow||!p.wrist||!p.otherShoulder)return false;
+  const inside=q=>q.x>-.08&&q.x<1.08&&q.y>-.08&&q.y<1.08;
+  return minVis(p)>=MIN_VIS&&inside(p.shoulder)&&inside(p.elbow)&&inside(p.wrist);
+}
+
+function resetTargetSmoothing(){
+  goodStartAt=null;upperLenSmooth=null;lowerLenSmooth=null;shoulderAnchor=null;
+  bodyOutwardSmooth=null;targetElbowSmooth=null;targetWristSmooth=null;
+}
+function resetMeasurements(){
+  smoothAngle=null;lastGoodAt=0;resetTargetSmoothing();
+  angleEl.textContent="--°";trackEl.textContent=t("waiting");confEl.textContent=t("beforeJoint");
+  setFeedback("wait",t("showArm"),0);
+}
+
+function renderPoseNav(){
+  poseNav.innerHTML="";
+  POSES.forEach((p,i)=>{
+    const b=document.createElement("button");
+    b.type="button";
+    b.className="poseBtn"+(i===currentPose?" active":"")+(completed.has(i)?" done":"");
+    b.innerHTML=`<b>${poseText(p,"name")}</b><span>${t("targetNav",p.angle)}</span>`;
+    b.addEventListener("click",()=>setPose(i));
+    poseNav.appendChild(b);
+  });
+}
+function updatePoseText(){
+  const p=POSES[currentPose];
+  poseTitle.textContent=poseText(p,"name");poseDesc.textContent=poseText(p,"desc");
+  targetAngleEl.textContent=t("target",p.angle-p.tol,p.angle+p.tol);
+  prevBtn.disabled=currentPose===0;
+  prevBtn.textContent=t("prev");
+  nextBtn.textContent=currentPose===POSES.length-1?t("first"):t("next");
+}
+function setPose(i){
+  currentPose=(i+POSES.length)%POSES.length;
+  resetTargetSmoothing();smoothAngle=null;goodStartAt=null;
+  setFeedback("wait",t("readyPose",poseText(POSES[currentPose],"name")),0);
+  renderPoseNav();updatePoseText();
+}
+
+function buildTarget(p){
+  const pose=POSES[currentPose];
+  upperLenSmooth=ema(upperLenSmooth,dist(p.shoulder,p.elbow),.06);
+  lowerLenSmooth=ema(lowerLenSmooth,dist(p.elbow,p.wrist),.06);
+  shoulderAnchor=emaPt(shoulderAnchor,p.shoulder,.07);
+
+  const outward=norm({x:p.shoulder.x-p.otherShoulder.x,y:p.shoulder.y-p.otherShoulder.y});
+  bodyOutwardSmooth=norm(emaPt(bodyOutwardSmooth,outward,.07));
+
+  const u=norm({x:bodyOutwardSmooth.x,y:bodyOutwardSmooth.y+.08});
+  const toShoulder={x:-u.x,y:-u.y};
+  let fore=rotate(toShoulder,pose.angle);
+  const fore2=rotate(toShoulder,-pose.angle);
+  if(fore2.y<fore.y)fore=fore2;
+
+  const er={x:shoulderAnchor.x+u.x*upperLenSmooth,y:shoulderAnchor.y+u.y*upperLenSmooth};
+  const wr={x:er.x+fore.x*lowerLenSmooth,y:er.y+fore.y*lowerLenSmooth};
+
+  targetElbowSmooth=emaPt(targetElbowSmooth,er,.06);
+  targetWristSmooth=emaPt(targetWristSmooth,wr,.06);
+  return{shoulder:shoulderAnchor,elbow:targetElbowSmooth,wrist:targetWristSmooth,upperLen:upperLenSmooth,lowerLen:lowerLenSmooth};
+}
+
+function cp(p){return{x:p.x*canvas.width,y:p.y*canvas.height}}
+function draw(actual,target,state){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(state==="good"){
+    const c=cp(actual.elbow);
+    const g=ctx.createRadialGradient(c.x,c.y,10,c.x,c.y,170);
+    g.addColorStop(0,"rgba(16,185,129,.20)");
+    g.addColorStop(1,"rgba(16,185,129,0)");
+    ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  const t=[cp(target.shoulder),cp(target.elbow),cp(target.wrist)];
+  ctx.save();
+  ctx.setLineDash([12,8]);
+  ctx.lineWidth=5;
+  ctx.strokeStyle=state==="good"?"rgba(16,185,129,.95)":"rgba(148,163,184,.95)";
+  ctx.beginPath();ctx.moveTo(t[0].x,t[0].y);ctx.lineTo(t[1].x,t[1].y);ctx.lineTo(t[2].x,t[2].y);ctx.stroke();
+  ctx.setLineDash([]);
+  t.forEach(q=>{
+    ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);
+    ctx.fillStyle=state==="good"?"#10b981":"#94a3b8";
+    ctx.fill();ctx.strokeStyle="white";ctx.lineWidth=2;ctx.stroke();
+  });
+  ctx.restore();
+
+  const a=[cp(actual.shoulder),cp(actual.elbow),cp(actual.wrist)];
+  ctx.strokeStyle=state==="good"?"#10b981":"#00d4ff";
+  ctx.lineWidth=6;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(a[0].x,a[0].y);ctx.lineTo(a[1].x,a[1].y);ctx.lineTo(a[2].x,a[2].y);ctx.stroke();
+
+  const cols=state==="good"?["#34d399","#10b981","#22c55e"]:["#facc15","#ef4444","#22c55e"];
+  a.forEach((q,i)=>{
+    ctx.beginPath();ctx.arc(q.x,q.y,9,0,Math.PI*2);
+    ctx.fillStyle=cols[i];ctx.fill();ctx.strokeStyle="white";ctx.lineWidth=2;ctx.stroke();
+  });
+}
+function setFeedback(kind,text,ms=0){
+  feedbackEl.className="feedback "+kind;feedbackEl.textContent=text;
+  const r=clamp(ms/HOLD_GOAL_MS,0,1);
+  progressFill.style.width=(r*100).toFixed(1)+"%";
+  progressText.textContent=`${t("holdTime")}: ${(Math.min(ms,HOLD_GOAL_MS)/1000).toFixed(1)} / 3.0${currentLang==="ja"?"秒":"초"}`;
+}
+function evaluate(angle,actual,target,now){
+  const p=POSES[currentPose],lo=p.angle-p.tol,hi=p.angle+p.tol;
+  const elbowErr=dist(actual.elbow,target.elbow)/(target.upperLen||1);
+  const wristErr=dist(actual.wrist,target.wrist)/(target.lowerLen||1);
+  const good=angle>=lo&&angle<=hi&&elbowErr<=.28&&wristErr<=.38;
+  const near=angle>=lo-7&&angle<=hi+7&&elbowErr<=.38&&wristErr<=.50;
+
+  if(good){
+    if(goodStartAt==null)goodStartAt=now;
+    const held=now-goodStartAt;
+    if(held>=HOLD_GOAL_MS){
+      completed.add(currentPose);renderPoseNav();
+      setFeedback("good",t("goodDone"),held);
+    }else{
+      setFeedback("good",t("goodMore",(Math.max(0,3-held/1000)).toFixed(1)),held);
+    }
+    return"good";
+  }
+
+  goodStartAt=null;
+  if(near){setFeedback("near",t("near"),0);return"near"}
+  if(angle>hi){setFeedback("adjust",t("bendMore"),0);return"adjust"}
+  if(angle<lo){setFeedback("adjust",t("straightenMore"),0);return"adjust"}
+  setFeedback("adjust",t("positionMore"),0);return"adjust";
+}
+
+function applyLanguage(lang=currentLang){
+  currentLang=lang;
+  localStorage.setItem("poseLang",currentLang);
+  document.documentElement.lang=currentLang;
+  document.title=t("title");
+  $("appTitle").textContent=t("title");
+  $("appSub").textContent=t("sub");
+  secureNotice.innerHTML=(!window.isSecureContext && location.hostname!=="localhost" && location.hostname!=="127.0.0.1")?t("noticeInsecure"):t("notice");
+  $("armLabel").textContent=t("armLabel");$("armLeft").textContent=t("leftArm");$("armRight").textContent=t("rightArm");
+  $("cameraLabel").textContent=t("cameraLabel");$("cameraFront").textContent=t("frontCamera");$("cameraRear").textContent=t("rearCamera");
+  startBtn.textContent=t("start");stopBtn.textContent=t("stop");
+  $("tabletTip").innerHTML=t("tip");
+  $("currentStepLabel").textContent=t("currentStep");$("angleLabel").textContent=t("angleLabel");$("feedbackLabel").textContent=t("feedbackLabel");$("trackLabel").textContent=t("trackLabel");
+  langKo.classList.toggle("active",currentLang==="ko");langJa.classList.toggle("active",currentLang==="ja");
+  renderPoseNav();updatePoseText();
+  if(!stream){
+    feedbackEl.textContent=t("initialFeedback");
+    progressText.textContent=`${t("holdTime")}: 0.0 / 3.0${currentLang==="ja"?"秒":"초"}`;
+    trackEl.textContent=t("waiting");confEl.textContent=t("beforeJoint");
+    status(t(detector?"ready":"loading"),detector?"ok":"");
+  }else{
+    status(t("cameraRunning"),"ok");
+  }
+}
+
+async function init(){
+  applyLanguage(currentLang);setMirrorForCamera();
+
+  if(!window.isSecureContext && location.hostname!=="localhost" && location.hostname!=="127.0.0.1"){
+    secureNotice.innerHTML=t("noticeInsecure");
+  }
+
+  try{
+    const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm");
+    const baseOptions={modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task"};
+
+    try{
+      detector=await PoseLandmarker.createFromOptions(vision,{
+        baseOptions:{...baseOptions,delegate:"GPU"},runningMode:"VIDEO",numPoses:1,
+        minPoseDetectionConfidence:.5,minPosePresenceConfidence:.5,minTrackingConfidence:.5
+      });
+    }catch(e){
+      console.warn("GPU 실패, CPU로 재시도",e);
+      detector=await PoseLandmarker.createFromOptions(vision,{
+        baseOptions,runningMode:"VIDEO",numPoses:1,
+        minPoseDetectionConfidence:.5,minPosePresenceConfidence:.5,minTrackingConfidence:.5
+      });
+    }
+    startBtn.disabled=false;status(t("ready"),"ok");
+  }catch(e){
+    console.error(e);status(t("modelFail"),"err");
+  }
+}
+
+async function startCamera(){
+  try{
+    if(stream){stream.getTracks().forEach(t=>t.stop())}
+
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{
+        width:{ideal:960},
+        height:{ideal:720},
+        facingMode:{ideal:cameraMode.value},
+        frameRate:{ideal:24,max:30}
+      },
+      audio:false
+    });
+
+    video.srcObject=stream;
+    await video.play();
+    setMirrorForCamera();
+
+    canvas.width=video.videoWidth||960;
+    canvas.height=video.videoHeight||720;
+
+    startBtn.disabled=true;stopBtn.disabled=false;
+    armSel.disabled=false;cameraMode.disabled=true;
+    resetMeasurements();status(t("cameraRunning"),"ok");
+    lastVideoTime=-1;lastDetectAt=0;loop();
+  }catch(e){
+    console.error(e);
+    const msg = (e && e.name==="NotAllowedError")
+      ? t("permissionDenied")
+      : t("cameraOpenFail");
+    status(msg,"err");
+  }
+}
+
+function stopCamera(){
+  if(raf)cancelAnimationFrame(raf);raf=null;
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  video.srcObject=null;ctx.clearRect(0,0,canvas.width,canvas.height);
+  startBtn.disabled=false;stopBtn.disabled=true;cameraMode.disabled=false;
+  resetMeasurements();status(t("cameraStopped"));
+}
+
+function loop(){
+  if(!stream||!detector)return;
+
+  const now=performance.now();
+  if(now-lastDetectAt>=DETECT_INTERVAL_MS && video.readyState>=2 && video.currentTime!==lastVideoTime){
+    lastDetectAt=now;lastVideoTime=video.currentTime;
+
+    try{
+      const lm=detector.detectForVideo(video,now).landmarks?.[0];
+
+      if(lm){
+        const p=armPoints(lm),mv=minVis(p);
+
+        if(valid(p)){
+          const raw=angleDeg(p.shoulder,p.elbow,p.wrist),target=buildTarget(p);
+          if(raw!=null){
+            smoothAngle=smoothAngle==null?raw:ANGLE_ALPHA*raw+(1-ANGLE_ALPHA)*smoothAngle;
+            lastGoodAt=now;
+
+            const actual={shoulder:p.shoulder,elbow:p.elbow,wrist:p.wrist};
+            const state=evaluate(smoothAngle,actual,target,now);
+            draw(actual,target,state);
+
+            angleEl.textContent=smoothAngle.toFixed(1)+"°";
+            trackEl.textContent=t("tracking");trackEl.className="ok";
+            confEl.textContent=t("visibility",(mv*100).toFixed(0));
+          }
+        }else if(now-lastGoodAt<=HOLD_MS&&smoothAngle!=null){
+          trackEl.textContent=t("briefLost");trackEl.className="warn";
+        }else{
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          angleEl.textContent="--°";trackEl.textContent=t("armHard");trackEl.className="warn";
+          confEl.textContent=t("showJoints");
+          setFeedback("wait",t("adjustTablet"),0);
+          smoothAngle=null;goodStartAt=null;
+        }
+      }else{
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        angleEl.textContent="--°";trackEl.textContent=t("noPerson");trackEl.className="warn";
+        confEl.textContent=t("showUpper");
+        setFeedback("wait",t("upperReady"),0);
+        smoothAngle=null;goodStartAt=null;
+      }
+    }catch(e){
+      console.error(e);status(t("analysisError"),"err");
+    }
+  }
+
+  raf=requestAnimationFrame(loop);
+}
+
+langKo.addEventListener("click",()=>applyLanguage("ko"));
+langJa.addEventListener("click",()=>applyLanguage("ja"));
+prevBtn.addEventListener("click",()=>setPose(Math.max(0,currentPose-1)));
+nextBtn.addEventListener("click",()=>setPose(currentPose===POSES.length-1?0:currentPose+1));
+armSel.addEventListener("change",()=>{ctx.clearRect(0,0,canvas.width,canvas.height);resetMeasurements()});
+cameraMode.addEventListener("change",setMirrorForCamera);
+startBtn.addEventListener("click",startCamera);
+stopBtn.addEventListener("click",stopCamera);
+window.addEventListener("beforeunload",stopCamera);
+window.addEventListener("orientationchange",()=>setTimeout(()=>{ if(video.videoWidth){canvas.width=video.videoWidth;canvas.height=video.videoHeight;} },300));
+
+init();
+</script>
+</body>
+</html>
